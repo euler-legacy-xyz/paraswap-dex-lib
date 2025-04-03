@@ -8,6 +8,8 @@ import { Address } from '../../types';
 import { DummyDexHelper } from '../../dex-helper/index';
 import { testEventSubscriber } from '../../../tests/utils-events';
 import { PoolState } from './types';
+import { Interface } from '@ethersproject/abi';
+import ERC20ABI from '../../abi/erc20.json';
 
 /*
   README
@@ -49,8 +51,12 @@ async function fetchPoolState(
   blockNumber: number,
   poolAddress: string,
 ): Promise<PoolState> {
-  // TODO: complete me!
-  return {};
+  const message = `EulerSwap: ${poolAddress} blockNumber ${blockNumber}`;
+  console.log(`Fetching state ${message}`);
+
+  const state = eulerswapPools.generateState(blockNumber);
+  console.log(`Done ${message}`);
+  return state;
 }
 
 // eventName -> blockNumbers
@@ -61,11 +67,20 @@ describe('Eulerswap EventPool Mainnet', function () {
   const network = Network.MAINNET;
   const dexHelper = new DummyDexHelper(network);
   const logger = dexHelper.getLogger(dexKey);
+
+  const factoryAddress = '0xF75548aF02f1928CbE9015985D4Fcbf96d728544';
+  const asset0 = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC
+  const asset1 = '0xdAC17F958D2ee523a2206206994597C13D831ec7'; // USDT
+  const poolAddress = '0x2bFED8dBEb8e6226a15300AC77eE9130E52410fE';
+  const poolInitCodeHash =
+    '0xcc469c6a985bd7c7c9f42991e8bf16ce2bfdfe7cc4158f555afb89ca75bd7b53';
   let eulerswapPool: EulerswapEventPool;
 
   // poolAddress -> EventMappings
   const eventsToTest: Record<Address, EventMappings> = {
-    // TODO: complete me!
+    [poolAddress]: {
+      Swap: [21986064],
+    },
   };
 
   beforeEach(async () => {
@@ -74,8 +89,16 @@ describe('Eulerswap EventPool Mainnet', function () {
       network,
       dexHelper,
       logger,
-      /* TODO: Put here additional constructor arguments if needed */
+      new Interface(ERC20ABI),
+      factoryAddress,
+      asset0,
+      asset1,
+      poolInitCodeHash,
     );
+
+    // Initialize the pool address and subscribed addresses
+    eulerswapPool.poolAddress = poolAddress;
+    eulerswapPool.addressesSubscribed[0] = poolAddress;
   });
 
   Object.entries(eventsToTest).forEach(

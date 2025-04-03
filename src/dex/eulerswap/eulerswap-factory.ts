@@ -117,4 +117,16 @@ export class EulerSwapFactory extends StatefulEventSubscriber<FactoryState> {
       concentrationY,
     });
   }
+
+  async poolsByPair(
+    asset0: string,
+    asset1: string,
+    blockNumber: number,
+  ): Promise<string[]> {
+    const contract = new this.dexHelper.web3Provider.eth.Contract(
+      FactoryABI as any,
+      this.factoryAddress,
+    );
+    return contract.methods.poolsByPair(asset0, asset1).call({}, blockNumber);
+  }
 }

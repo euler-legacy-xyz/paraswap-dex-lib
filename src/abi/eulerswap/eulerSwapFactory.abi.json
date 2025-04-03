@@ -30,38 +30,6 @@
   },
   {
     "type": "function",
-    "name": "allPools",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "allPoolsLength",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "computePoolAddress",
     "inputs": [
       {
@@ -248,25 +216,6 @@
   },
   {
     "type": "function",
-    "name": "eulerAccountToPool",
-    "inputs": [
-      {
-        "name": "eulerAccount",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "operator",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "evkFactory",
     "inputs": [],
     "outputs": [
@@ -280,15 +229,105 @@
   },
   {
     "type": "function",
-    "name": "getAllPoolsListSlice",
+    "name": "poolByEulerAccount",
     "inputs": [
       {
-        "name": "_start",
+        "name": "eulerAccount",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pools",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "poolsByPair",
+    "inputs": [
+      {
+        "name": "asset0",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "asset1",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "poolsByPairLength",
+    "inputs": [
+      {
+        "name": "asset0",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "asset1",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "poolsByPairSlice",
+    "inputs": [
+      {
+        "name": "asset0",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "asset1",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "start",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_end",
+        "name": "end",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -301,6 +340,50 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "poolsLength",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "poolsSlice",
+    "inputs": [
+      {
+        "name": "start",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "end",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "uninstallPool",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "event",
@@ -388,6 +471,37 @@
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "PoolUninstalled",
+    "inputs": [
+      {
+        "name": "asset0",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "asset1",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "eulerAccount",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "pool",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
     "name": "ControllerDisabled",
     "inputs": []
@@ -420,6 +534,11 @@
   {
     "type": "error",
     "name": "OperatorNotInstalled",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SliceOutOfBounds",
     "inputs": []
   },
   {
