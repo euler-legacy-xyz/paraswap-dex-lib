@@ -25,8 +25,8 @@ export const PoolsToPreload: DexConfigMap<
 export const EulerswapConfig: DexConfigMap<DexParams> = {
   Eulerswap: {
     [Network.MAINNET]: {
-      factory: '0xF75548aF02f1928CbE9015985D4Fcbf96d728544',
-      periphery: '0x813D74E832b3d9E9451d8f0E871E877edf2a5A5f',
+      factory: '0x79d3a7a9d203d352a655255BdB1a233623f536B7',
+      periphery: '0x829e7c83886323980BE76CedD837905cCEc3D738',
       initHash:
         '0xcc469c6a985bd7c7c9f42991e8bf16ce2bfdfe7cc4158f555afb89ca75bd7b53',
     },

@@ -68,10 +68,10 @@ describe('Eulerswap EventPool Mainnet', function () {
   const dexHelper = new DummyDexHelper(network);
   const logger = dexHelper.getLogger(dexKey);
 
-  const factoryAddress = '0xF75548aF02f1928CbE9015985D4Fcbf96d728544';
+  const factoryAddress = '0x79d3a7a9d203d352a655255BdB1a233623f536B7';
   const asset0 = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC
   const asset1 = '0xdAC17F958D2ee523a2206206994597C13D831ec7'; // USDT
-  const poolAddress = '0x2bFED8dBEb8e6226a15300AC77eE9130E52410fE';
+  const poolAddress = '0xBf691F421bEad4148C4789DbFa1839135B296a83';
   const poolInitCodeHash =
     '0xcc469c6a985bd7c7c9f42991e8bf16ce2bfdfe7cc4158f555afb89ca75bd7b53';
   let eulerswapPool: EulerswapEventPool;
@@ -79,7 +79,7 @@ describe('Eulerswap EventPool Mainnet', function () {
   // poolAddress -> EventMappings
   const eventsToTest: Record<Address, EventMappings> = {
     [poolAddress]: {
-      Swap: [21986064],
+      Swap: [22195283, 22195322, 22195429],
     },
   };
 
