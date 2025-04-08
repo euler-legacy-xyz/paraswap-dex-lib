@@ -33,7 +33,7 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
   readonly eventPools: Record<string, EulerswapEventPool | null> = {};
 
   readonly hasConstantPriceLargeAmounts = false;
-  // TODO: set true here if protocols works only with wrapped asset
+  // set true here if protocols works only with wrapped asset
   readonly needWrapNative = true;
 
   readonly isFeeOnTransferSupported = false;
@@ -48,8 +48,6 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
     getDexKeysWithNetwork(EulerswapConfig);
 
   logger: Logger;
-
-  intervalTask?: NodeJS.Timeout;
 
   constructor(
     readonly network: Network,
@@ -85,10 +83,10 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
   // pricing service. It is intended to setup the integration
   // for pricing requests. It is optional for a DEX to
   // implement this function
-  async initializePricing(blockNumber: number) {
-    // Initialize the factory to start listening for events
-    await this.factoryInstance.initialize(blockNumber);
-  }
+  // async initializePricing(blockNumber: number) {
+  //   // Initialize the factory to start listening for events
+  //   await this.factoryInstance.initialize(blockNumber);
+  // }
 
   // Legacy: was only used for V5
   // Returns the list of contract adapters (name and index)
@@ -128,7 +126,7 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
       // Create pool identifiers for each pool address
       return Promise.all(
         poolAddresses.map((poolAddress: string) =>
-          this.getPoolIdentifier(_srcAddress, _destAddress, poolAddress),
+          this.getPoolIdentifier(poolAddress),
         ),
       );
     } catch (e) {
@@ -140,148 +138,8 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
     }
   }
 
-  async getPoolIdentifier(
-    srcAddress: Address,
-    destAddress: Address,
-    poolAddress: Address,
-  ): Promise<string> {
-    // Simple pool identifier format
+  async getPoolIdentifier(poolAddress: Address): Promise<string> {
     return `${this.dexKey}_${poolAddress}`;
-
-    /*
-    // Detailed pool identifier with immutable parameters
-    const tokenAddresses = this._sortTokens(srcAddress, destAddress).join('_');
-
-    // Create aggregated calls to get all immutable parameters
-    const calls = [
-      {
-        target: poolAddress,
-        callData: this.poolIface.encodeFunctionData('vault0'),
-        decodeFunction: (returnData: BytesLike | MultiResult<BytesLike>) => {
-          const data = typeof returnData === 'object' && 'success' in returnData 
-            ? returnData.returnData 
-            : returnData;
-          return this.poolIface.decodeFunctionResult('vault0', data)[0];
-        },
-      },
-      {
-        target: poolAddress,
-        callData: this.poolIface.encodeFunctionData('vault1'),
-        decodeFunction: (returnData: BytesLike | MultiResult<BytesLike>) => {
-          const data = typeof returnData === 'object' && 'success' in returnData 
-            ? returnData.returnData 
-            : returnData;
-          return this.poolIface.decodeFunctionResult('vault1', data)[0];
-        },
-      },
-      {
-        target: poolAddress,
-        callData: this.poolIface.encodeFunctionData('eulerAccount'),
-        decodeFunction: (returnData: BytesLike | MultiResult<BytesLike>) => {
-          const data = typeof returnData === 'object' && 'success' in returnData 
-            ? returnData.returnData 
-            : returnData;
-          return this.poolIface.decodeFunctionResult('eulerAccount', data)[0];
-        },
-      },
-      {
-        target: poolAddress,
-        callData: this.poolIface.encodeFunctionData('equilibriumReserve0'),
-        decodeFunction: (returnData: BytesLike | MultiResult<BytesLike>) => {
-          const data = typeof returnData === 'object' && 'success' in returnData 
-            ? returnData.returnData 
-            : returnData;
-          return this.poolIface.decodeFunctionResult('equilibriumReserve0', data)[0];
-        },
-      },
-      {
-        target: poolAddress,
-        callData: this.poolIface.encodeFunctionData('equilibriumReserve1'),
-        decodeFunction: (returnData: BytesLike | MultiResult<BytesLike>) => {
-          const data = typeof returnData === 'object' && 'success' in returnData 
-            ? returnData.returnData 
-            : returnData;
-          return this.poolIface.decodeFunctionResult('equilibriumReserve1', data)[0];
-        },
-      },
-      {
-        target: poolAddress,
-        callData: this.poolIface.encodeFunctionData('feeMultiplier'),
-        decodeFunction: (returnData: BytesLike | MultiResult<BytesLike>) => {
-          const data = typeof returnData === 'object' && 'success' in returnData 
-            ? returnData.returnData 
-            : returnData;
-          return this.poolIface.decodeFunctionResult('feeMultiplier', data)[0];
-        },
-      },
-      {
-        target: poolAddress,
-        callData: this.poolIface.encodeFunctionData('priceX'),
-        decodeFunction: (returnData: BytesLike | MultiResult<BytesLike>) => {
-          const data = typeof returnData === 'object' && 'success' in returnData 
-            ? returnData.returnData 
-            : returnData;
-          return this.poolIface.decodeFunctionResult('priceX', data)[0];
-        },
-      },
-      {
-        target: poolAddress,
-        callData: this.poolIface.encodeFunctionData('priceY'),
-        decodeFunction: (returnData: BytesLike | MultiResult<BytesLike>) => {
-          const data = typeof returnData === 'object' && 'success' in returnData 
-            ? returnData.returnData 
-            : returnData;
-          return this.poolIface.decodeFunctionResult('priceY', data)[0];
-        },
-      },
-      {
-        target: poolAddress,
-        callData: this.poolIface.encodeFunctionData('concentrationX'),
-        decodeFunction: (returnData: BytesLike | MultiResult<BytesLike>) => {
-          const data = typeof returnData === 'object' && 'success' in returnData 
-            ? returnData.returnData 
-            : returnData;
-          return this.poolIface.decodeFunctionResult('concentrationX', data)[0];
-        },
-      },
-      {
-        target: poolAddress,
-        callData: this.poolIface.encodeFunctionData('concentrationY'),
-        decodeFunction: (returnData: BytesLike | MultiResult<BytesLike>) => {
-          const data = typeof returnData === 'object' && 'success' in returnData 
-            ? returnData.returnData 
-            : returnData;
-          return this.poolIface.decodeFunctionResult('concentrationY', data)[0];
-        },
-      },
-    ];
-
-    try {
-      const results = await this.dexHelper.multiWrapper.aggregate(calls);
-
-      const [
-        vault0,
-        vault1,
-        eulerAccount,
-        equilibriumReserve0,
-        equilibriumReserve1,
-        feeMultiplier,
-        priceX,
-        priceY,
-        concentrationX,
-        concentrationY,
-      ] = results;
-
-      return `${this.dexKey}_${tokenAddresses}_${vault0}_${vault1}_${eulerAccount}_${equilibriumReserve0}_${equilibriumReserve1}_${feeMultiplier}_${priceX}_${priceY}_${concentrationX}_${concentrationY}`;
-    } catch (e) {
-      this.logger.error(
-        `Error_getPoolIdentifier: ${poolAddress}`,
-        e,
-      );
-      // Fallback to basic identifier if we can't get all parameters
-      return `${this.dexKey}_${tokenAddresses}`;
-    }
-    */
   }
 
   // Returns pool prices for amounts.
@@ -452,9 +310,9 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
   // update common state required for calculating
   // getTopPoolsForToken. It is optional for a DEX
   // to implement this
-  async updatePoolState(): Promise<void> {
-    // TODO: complete me!
-  }
+  // async updatePoolState(): Promise<void> {
+  //   // TODO: complete me!
+  // }
 
   // Returns list of top pools based on liquidity. Max
   // limit number pools should be returned.
@@ -464,15 +322,6 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
   ): Promise<PoolLiquidity[]> {
     //TODO: complete me!
     return [];
-  }
-
-  // This is optional function in case if your implementation has acquired any resources
-  // you need to release for graceful shutdown. For example, it may be any interval timer
-  releaseResources(): AsyncOrSync<void> {
-    if (this.intervalTask !== undefined) {
-      clearInterval(this.intervalTask);
-      this.intervalTask = undefined;
-    }
   }
 
   protected _getLoweredAddresses(srcToken: Token, destToken: Token) {

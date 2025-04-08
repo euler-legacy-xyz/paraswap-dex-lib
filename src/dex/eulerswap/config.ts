@@ -8,7 +8,7 @@ import { Address } from '../../types';
 export const PoolsToPreload: DexConfigMap<
   { token0: Address; token1: Address }[]
 > = {
-  UniswapV3: {
+  Eulerswap: {
     [Network.MAINNET]: [
       {
         token0: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270'.toLowerCase(),
