@@ -26,8 +26,8 @@ export type EulerswapData = {
   // tx building. The data structure should be minimal.
   // Complete me!
   exchange: Address;
-  amount0Out: string;
-  amount1Out: string;
+  amountIn: string;
+  amountOut: string;
   isApproved?: boolean;
 };
 

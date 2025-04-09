@@ -235,10 +235,10 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
           unit,
           data: {
             exchange: poolAddress,
-            // For SELL: if token0 is src, then amount1 is out, else amount0 is out
-            // For BUY: if token0 is src, then amount0 is out, else amount1 is out
-            amount0Out: isToken0Src === isSell ? '0' : poolPrices[0].toString(),
-            amount1Out: isToken0Src === isSell ? poolPrices[0].toString() : '0',
+            amountIn: amounts[0].toString(),
+            amountOut: poolPrices[0].toString(),
+            // amount0Out: isToken0Src === isSell ? '0' : poolPrices[0].toString(),
+            // amount1Out: isToken0Src === isSell ? poolPrices[0].toString() : '0',
           },
           poolAddresses: [poolAddress],
           exchange: this.dexKey,
@@ -292,14 +292,55 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
     data: EulerswapData,
     side: SwapSide,
   ): AdapterExchangeParam {
-    // TODO: complete me!
-    const { exchange } = data;
+    let payload;
 
-    // Encode here the payload for adapter
-    const payload = '';
+    if (side === SwapSide.SELL) {
+      const { amountIn, amountOut: amountOutMin } = data;
 
+      // Encode parameters for the adapter
+      payload = this.abiCoder.encodeParameter(
+        {
+          ParentStruct: {
+            eulerSwap: 'address',
+            tokenIn: 'address',
+            tokenOut: 'address',
+            amountIn: 'uint256',
+            amountOutMin: 'uint256',
+          },
+        },
+        {
+          eulerSwap: data.exchange,
+          tokenIn: srcToken,
+          tokenOut: destToken,
+          amountIn: amountIn,
+          amountOutMin: amountOutMin,
+        },
+      );
+    } else {
+      const { amountIn: amountInMax, amountOut } = data;
+
+      // Encode parameters for the adapter
+      payload = this.abiCoder.encodeParameter(
+        {
+          ParentStruct: {
+            eulerSwap: 'address',
+            tokenIn: 'address',
+            tokenOut: 'address',
+            amountOut: 'uint256',
+            amountInMax: 'uint256',
+          },
+        },
+        {
+          eulerSwap: data.exchange,
+          tokenIn: srcToken,
+          tokenOut: destToken,
+          amountOut: amountOut,
+          amountInMax: amountInMax,
+        },
+      );
+    }
     return {
-      targetExchange: exchange,
+      targetExchange: this.config.periphery,
       payload,
       networkFee: '0',
     };
