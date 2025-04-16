@@ -59,44 +59,58 @@ function testForNetwork(
   const holders = Holders[network];
   const nativeTokenSymbol = NativeTokenSymbols[network];
 
-  // TODO: Add any direct swap contractMethod name if it exists
-  const sideToContractMethods = new Map([
+  // swapExactAmountOut for usdc->usdt && usdt->usdc works
+  const sideToContractMethods1 = new Map([
+    [SwapSide.BUY, [ContractMethod.swapExactAmountOut]],
+  ]);
+
+  // swapExactAmountIn works only for usdc->usdt, periphery quoting reverts on some amounts for usdt->usdc
+  const sideToContractMethods2 = new Map([
     [SwapSide.SELL, [ContractMethod.swapExactAmountIn]],
-    // TODO: If buy is not supported remove the buy contract methods
-    // [SwapSide.BUY, [ContractMethod.swapExactAmountOut]],
+    [SwapSide.BUY, [ContractMethod.swapExactAmountOut]],
   ]);
 
   describe(`${network}`, () => {
-    sideToContractMethods.forEach((contractMethods, side) =>
+    sideToContractMethods1.forEach((contractMethods, side) =>
       describe(`${side}`, () => {
         contractMethods.forEach((contractMethod: ContractMethod) => {
           describe(`${contractMethod}`, () => {
-            // it(`${nativeTokenSymbol} -> ${tokenASymbol}`, async () => {
-            //   await testE2E(
-            //     tokens[nativeTokenSymbol],
-            //     tokens[tokenASymbol],
-            //     holders[nativeTokenSymbol],
-            //     side === SwapSide.SELL ? nativeTokenAmount : tokenAAmount,
-            //     side,
-            //     dexKey,
-            //     contractMethod,
-            //     network,
-            //     provider,
-            //   );
-            // });
-            // it(`${tokenASymbol} -> ${nativeTokenSymbol}`, async () => {
-            //   await testE2E(
-            //     tokens[tokenASymbol],
-            //     tokens[nativeTokenSymbol],
-            //     holders[tokenASymbol],
-            //     side === SwapSide.SELL ? tokenAAmount : nativeTokenAmount,
-            //     side,
-            //     dexKey,
-            //     contractMethod,
-            //     network,
-            //     provider,
-            //   );
-            // });
+            it(`${tokenASymbol} -> ${tokenBSymbol}`, async () => {
+              await testE2E(
+                tokens[tokenASymbol],
+                tokens[tokenBSymbol],
+                holders[tokenASymbol],
+                side === SwapSide.SELL ? tokenAAmount : tokenBAmount,
+                side,
+                dexKey,
+                contractMethod,
+                network,
+                provider,
+              );
+            });
+
+            it(`${tokenBSymbol} -> ${tokenASymbol}`, async () => {
+              await testE2E(
+                tokens[tokenBSymbol],
+                tokens[tokenASymbol],
+                holders[tokenBSymbol],
+                side === SwapSide.SELL ? tokenBAmount : tokenAAmount,
+                side,
+                dexKey,
+                contractMethod,
+                network,
+                provider,
+              );
+            });
+          });
+        });
+      }),
+    );
+
+    sideToContractMethods2.forEach((contractMethods, side) =>
+      describe(`${side}`, () => {
+        contractMethods.forEach((contractMethod: ContractMethod) => {
+          describe(`${contractMethod}`, () => {
             it(`${tokenASymbol} -> ${tokenBSymbol}`, async () => {
               await testE2E(
                 tokens[tokenASymbol],
@@ -139,7 +153,5 @@ describe('Eulerswap E2E', () => {
       tokenBAmount,
       nativeTokenAmount,
     );
-
-    // TODO: Add any additional test cases required to test Eulerswap
   });
 });

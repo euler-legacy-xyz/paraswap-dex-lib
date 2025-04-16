@@ -1,4 +1,4 @@
-import { Address } from '../../types';
+import { Address, NumberAsString } from '../../types';
 import { BigNumber, BytesLike } from 'ethers';
 import { MultiResult } from '../../lib/multi-wrapper';
 import { EulerSwapFactory } from './eulerswap-factory';
@@ -21,14 +21,12 @@ export type PoolState = {
 export type FactoryState = Record<string, never>;
 
 export type EulerswapData = {
-  // TODO: EulerswapData is the dex data that is
+  // EulerswapData is the dex data that is
   // returned by the API that can be used for
   // tx building. The data structure should be minimal.
-  // Complete me!
   exchange: Address;
-  amountIn: string;
-  amountOut: string;
-  isApproved?: boolean;
+  // amountIn: string;
+  // amountOut: string;
 };
 
 // export type DecodeStateMultiCallFunc = (
@@ -47,4 +45,29 @@ export type DexParams = {
   initHash: string;
   eventPoolImplementation?: typeof EulerswapEventPool;
   factoryImplementation?: typeof EulerSwapFactory;
+};
+
+export enum EulerswapFunctions {
+  exactInput = 'swapExactIn',
+  exactOutput = 'swapExactOut',
+}
+
+export type EulerswapSimpleSwapParams =
+  | EulerswapSimpleSwapSellParam
+  | EulerswapSimpleSwapBuyParam;
+
+export type EulerswapSimpleSwapSellParam = {
+  eulerSwap: Address;
+  tokenIn: Address;
+  tokenOut: Address;
+  amountIn: NumberAsString;
+  amountOutMin: NumberAsString;
+};
+
+export type EulerswapSimpleSwapBuyParam = {
+  eulerSwap: Address;
+  tokenIn: Address;
+  tokenOut: Address;
+  amountOut: NumberAsString;
+  amountInMax: NumberAsString;
 };

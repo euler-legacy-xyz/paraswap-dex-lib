@@ -8,14 +8,25 @@ import {
   SimpleExchangeParam,
   PoolLiquidity,
   Logger,
+  NumberAsString,
+  DexExchangeParam,
 } from '../../types';
 import { SwapSide, Network } from '../../constants';
 import * as CALLDATA_GAS_COST from '../../calldata-gas-cost';
 import { getDexKeysWithNetwork } from '../../utils';
 import { IDex } from '../../dex/idex';
 import { IDexHelper } from '../../dex-helper/idex-helper';
-import { EulerswapData } from './types';
-import { SimpleExchange } from '../simple-exchange';
+import {
+  EulerswapData,
+  EulerswapFunctions,
+  EulerswapSimpleSwapParams,
+  EulerswapSimpleSwapSellParam,
+  EulerswapSimpleSwapBuyParam,
+} from './types';
+import {
+  getLocalDeadlineAsFriendlyPlaceholder,
+  SimpleExchange,
+} from '../simple-exchange';
 import { EulerswapConfig, PoolsToPreload } from './config';
 import { EulerswapEventPool } from './eulerswap-pool';
 import { Interface } from '@ethersproject/abi';
@@ -27,6 +38,9 @@ import EulerSwapFactoryABI from '../../abi/eulerswap/eulerSwapFactory.abi.json';
 import EulerSwapPeripheryABI from '../../abi/eulerswap/eulerSwapPeriphery.abi.json';
 import { EulerSwapFactory } from './eulerswap-factory';
 import { Contract } from 'web3-eth-contract';
+import { SwellData } from '../swell/swell';
+import { UniswapV3SimpleSwapParams } from '../uniswap-v3/types';
+import { extractReturnAmountPosition } from '../../executor/utils';
 
 export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
   // protected eventPools: EulerswapEventPool;
@@ -115,11 +129,13 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
 
     if (_srcAddress === _destAddress) return [];
 
+    const [asset0, asset1] = this._sortTokens(_srcAddress, _destAddress);
+
     try {
       // Get all pools for this pair in a single call using factory
       const poolAddresses = await this.factoryInstance.poolsByPair(
-        _srcAddress,
-        _destAddress,
+        asset0,
+        asset1,
         blockNumber,
       );
 
@@ -174,10 +190,12 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
           return parts[1]; // The pool address is the second part after dexKey
         });
       } else {
+        const [asset0, asset1] = this._sortTokens(_srcAddress, _destAddress);
+
         // If no limitPools, get all pools for the pair
         poolAddresses = await this.factoryInstance.poolsByPair(
-          _srcAddress,
-          _destAddress,
+          asset0,
+          asset1,
           blockNumber,
         );
       }
@@ -185,33 +203,45 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
       if (poolAddresses.length === 0) return null;
 
       const calls = poolAddresses.flatMap(poolAddress =>
-        amounts.map(amount => ({
-          target: this.config.periphery,
-          callData:
-            side === SwapSide.SELL
-              ? this.peripheryIface.encodeFunctionData('quoteExactInput', [
-                  poolAddress,
-                  _srcAddress,
-                  _destAddress,
-                  amount.toString(),
-                ])
-              : this.peripheryIface.encodeFunctionData('quoteExactOutput', [
-                  poolAddress,
-                  _srcAddress,
-                  _destAddress,
-                  amount.toString(),
-                ]),
-          decodeFunction: (returnData: BytesLike | MultiResult<BytesLike>) => {
-            const data =
-              typeof returnData === 'object' && 'success' in returnData
-                ? returnData.returnData
-                : returnData;
-            return this.peripheryIface.decodeFunctionResult(
-              side === SwapSide.SELL ? 'quoteExactInput' : 'quoteExactOutput',
-              data,
-            )[0];
-          },
-        })),
+        amounts
+          .map(amount => {
+            // if (amount <= 2000000n) {
+            //   return null;
+            // }
+            return {
+              target: this.config.periphery,
+              callData:
+                side === SwapSide.SELL
+                  ? this.peripheryIface.encodeFunctionData('quoteExactInput', [
+                      poolAddress,
+                      _srcAddress,
+                      _destAddress,
+                      amount.toString(),
+                    ])
+                  : this.peripheryIface.encodeFunctionData('quoteExactOutput', [
+                      poolAddress,
+                      _srcAddress,
+                      _destAddress,
+                      amount.toString(),
+                    ]),
+              decodeFunction: (
+                returnData: BytesLike | MultiResult<BytesLike>,
+              ) => {
+                const data =
+                  typeof returnData === 'object' && 'success' in returnData
+                    ? returnData.returnData
+                    : returnData;
+
+                return this.peripheryIface.decodeFunctionResult(
+                  side === SwapSide.SELL
+                    ? 'quoteExactInput'
+                    : 'quoteExactOutput',
+                  data,
+                )[0];
+              },
+            };
+          })
+          .filter((item): item is NonNullable<typeof item> => item !== null),
       );
 
       const results = await this.dexHelper.multiWrapper.aggregate(calls);
@@ -219,14 +249,15 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
         BigInt(10) **
         BigInt(side === SwapSide.SELL ? destToken.decimals : srcToken.decimals);
 
-      // Determine token order and which amount is out
-      const isToken0Src = _srcAddress < _destAddress;
-      const isSell = side === SwapSide.SELL;
-
       // Group results by pool
       const poolResults = poolAddresses.map((poolAddress, poolIndex) => {
-        const startIndex = poolIndex * amounts.length;
-        const endIndex = startIndex + amounts.length;
+        // Calculate the slice of the results array for this specific pool
+        // Since we queried prices for each (pool, amount) combination in a flat array,
+        // we need to extract just the portion for the current pool
+        const startIndex = poolIndex * amounts.length; // Skip all previous pools' results
+        const endIndex = startIndex + amounts.length; // End at the last result for this pool
+
+        // Extract just this pool's price results from the flat results array
         const poolPrices = results
           .slice(startIndex, endIndex)
           .map(result => BigInt(result));
@@ -235,10 +266,6 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
           unit,
           data: {
             exchange: poolAddress,
-            amountIn: amounts[0].toString(),
-            amountOut: poolPrices[0].toString(),
-            // amount0Out: isToken0Src === isSell ? '0' : poolPrices[0].toString(),
-            // amount1Out: isToken0Src === isSell ? poolPrices[0].toString() : '0',
           },
           poolAddresses: [poolAddress],
           exchange: this.dexKey,
@@ -247,7 +274,6 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
           prices: poolPrices,
         };
       });
-
       return poolResults;
     } catch (e) {
       this.logger.error(
@@ -295,7 +321,7 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
     let payload;
 
     if (side === SwapSide.SELL) {
-      const { amountIn, amountOut: amountOutMin } = data;
+      // const { amountIn, amountOut: amountOutMin } = data;
 
       // Encode parameters for the adapter
       payload = this.abiCoder.encodeParameter(
@@ -312,12 +338,12 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
           eulerSwap: data.exchange,
           tokenIn: srcToken,
           tokenOut: destToken,
-          amountIn: amountIn,
-          amountOutMin: amountOutMin,
+          amountIn: srcAmount,
+          amountOutMin: destAmount,
         },
       );
     } else {
-      const { amountIn: amountInMax, amountOut } = data;
+      // const { amountIn: amountInMax, amountOut } = data;
 
       // Encode parameters for the adapter
       payload = this.abiCoder.encodeParameter(
@@ -334,8 +360,8 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
           eulerSwap: data.exchange,
           tokenIn: srcToken,
           tokenOut: destToken,
-          amountOut: amountOut,
-          amountInMax: amountInMax,
+          amountOut: destAmount,
+          amountInMax: srcAmount,
         },
       );
     }
@@ -343,6 +369,75 @@ export class Eulerswap extends SimpleExchange implements IDex<EulerswapData> {
       targetExchange: this.config.periphery,
       payload,
       networkFee: '0',
+    };
+  }
+
+  getDexParam(
+    srcToken: Address,
+    destToken: Address,
+    srcAmount: NumberAsString,
+    destAmount: NumberAsString,
+    recipient: Address,
+    data: EulerswapData,
+    side: SwapSide,
+  ): DexExchangeParam {
+    const swapFunction =
+      side === SwapSide.SELL
+        ? EulerswapFunctions.exactInput
+        : EulerswapFunctions.exactOutput;
+
+    const swapFunctionParams: EulerswapSimpleSwapParams =
+      side === SwapSide.SELL
+        ? {
+            eulerSwap: data.exchange,
+            tokenIn: srcToken,
+            tokenOut: destToken,
+            amountIn: srcAmount,
+            amountOutMin: destAmount,
+          }
+        : {
+            eulerSwap: data.exchange,
+            tokenIn: srcToken,
+            tokenOut: destToken,
+            amountOut: destAmount,
+            amountInMax: srcAmount,
+          };
+
+    let params: any[];
+
+    if (side === SwapSide.SELL) {
+      const sellParams = swapFunctionParams as EulerswapSimpleSwapSellParam;
+      params = [
+        sellParams.eulerSwap,
+        sellParams.tokenIn,
+        sellParams.tokenOut,
+        sellParams.amountIn,
+        sellParams.amountOutMin,
+      ];
+    } else {
+      const buyParams = swapFunctionParams as EulerswapSimpleSwapBuyParam;
+      params = [
+        buyParams.eulerSwap,
+        buyParams.tokenIn,
+        buyParams.tokenOut,
+        buyParams.amountOut,
+        buyParams.amountInMax,
+      ];
+    }
+
+    const exchangeData = this.peripheryIface.encodeFunctionData(
+      swapFunction,
+      params,
+    );
+
+    return {
+      needWrapNative: this.needWrapNative,
+      dexFuncHasRecipient: false,
+      exchangeData,
+      targetExchange: this.config.periphery,
+      returnAmountPos: undefined,
+      skipApproval: false,
+      permit2Approval: true,
     };
   }
 
