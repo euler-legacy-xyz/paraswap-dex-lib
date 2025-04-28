@@ -142,8 +142,9 @@ export class LocalParaswapSDK implements IParaSwapSDK {
       transferFees,
     );
 
-    if (!poolPrices || poolPrices.length == 0)
+    if (!poolPrices || poolPrices.length == 0) {
       throw new Error('Fail to get price for ' + this.dexKeys.join(', '));
+    }
 
     const finalPrice = poolPrices[0];
     const quoteAmount = finalPrice.prices[chunks];
@@ -153,7 +154,6 @@ export class LocalParaswapSDK implements IParaSwapSDK {
     const destAmount = (
       side === SwapSide.SELL ? quoteAmount : amount
     ).toString();
-
     // eslint-disable-next-line no-console
     console.log(
       `Estimated gas cost for ${this.dexKeys}: ${

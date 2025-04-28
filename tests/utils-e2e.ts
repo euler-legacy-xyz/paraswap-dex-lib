@@ -224,6 +224,9 @@ export async function testE2E(
       amountToFund,
     );
   } else {
+    console.log('priceRoute.contractAddress', priceRoute.contractAddress);
+    console.log('amountToFund', amountToFund);
+
     // add token balance and allowance to Augustus
     await tenderlySimulator.addTokenBalanceOverride(
       stateOverride,
@@ -240,6 +243,38 @@ export async function testE2E(
       priceRoute.contractAddress,
       amountToFund,
     );
+
+    if (contractMethod === ContractMethod.swapExactAmountIn) {
+      await tenderlySimulator.addAllowanceOverride(
+        stateOverride,
+        network,
+        srcToken.address,
+        '0x000010036c0190e009a000d0fc3541100a07380a',
+        '0x829e7c83886323980be76cedd837905ccec3d738',
+        amountToFund,
+      );
+    } else if (contractMethod === ContractMethod.swapExactAmountOut) {
+      await tenderlySimulator.addAllowanceOverride(
+        stateOverride,
+        network,
+        srcToken.address,
+        '0xe009f00e200a090090fc70e02d70b232000c0802',
+        '0x829e7c83886323980be76cedd837905ccec3d738',
+        amountToFund,
+      );
+
+      // fix for issue with usdt->usdc
+      if (srcToken.address == '0xdac17f958d2ee523a2206206994597c13d831ec7') {
+        await tenderlySimulator.addAllowanceOverride(
+          stateOverride,
+          network,
+          srcToken.address,
+          '0xe009f00e200a090090fc70e02d70b232000c0802',
+          '0x000000000022d473030f116ddee9f6b43ac78ba3',
+          0n,
+        );
+      }
+    }
   }
   // build swap transaction
   const _slippage = slippage !== undefined ? BigInt(slippage) : 100n;
@@ -271,6 +306,7 @@ export async function testE2E(
   const simulation = await tenderlySimulator.simulateTransaction(
     simulationRequest,
   );
+  // console.log("afttterrrr simulaaaation");
   // log gas estimation if testing against API
   if (useAPI) {
     const estimatedGas = Number(priceRoute.gasCost);
