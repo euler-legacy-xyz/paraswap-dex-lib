@@ -68,7 +68,7 @@
     "ethers": "^5.7.2",
     "joi": "^17.7.0",
     "lens.ts": "^0.5.1",
-    "lodash": "4.17.21",
+    "lodash": "4.17.23",
     "log4js": "6.6.1",
     "node-cache": "^5.1.2",
     "protobufjs": "^7.4.0",
