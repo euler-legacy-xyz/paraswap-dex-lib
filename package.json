@@ -71,7 +71,7 @@
     "lodash": "4.17.21",
     "log4js": "6.6.1",
     "node-cache": "^5.1.2",
-    "protobufjs": "^7.4.0",
+    "protobufjs": "^7.5.5",
     "ts-essentials": "9.1.2",
     "uuid": "^9.0.0",
     "web3": "1.6.0",
